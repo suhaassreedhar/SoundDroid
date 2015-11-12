@@ -3,6 +3,7 @@ package com.example.suhaas.sounddroid;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Bundle;
+import android.support.v4.view.MenuItemCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -12,6 +13,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ImageView;
+import android.widget.SearchView;
 import android.widget.TextView;
 
 import com.example.suhaas.sounddroid.com.example.suhaas.sounddroid.soundcloud.SoundCloud;
@@ -20,14 +22,16 @@ import com.example.suhaas.sounddroid.com.example.suhaas.sounddroid.soundcloud.Tr
 import com.squareup.picasso.Picasso;
 
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import retrofit.Callback;
 import retrofit.RetrofitError;
 import retrofit.client.Response;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements SearchView.OnQueryTextListener{
     private static final String TAG = "MainActivity";
 
     private TracksAdapter mAdapter;
@@ -36,6 +40,8 @@ public class MainActivity extends AppCompatActivity {
     private ImageView mSelectedThumbnail;
     private MediaPlayer mMediaPlayer;
     private ImageView mPlayerStateButton;
+    private SearchView mSearchView;
+    private List<Track> mPreviousTracks;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,6 +55,12 @@ public class MainActivity extends AppCompatActivity {
             public void onPrepared(MediaPlayer mp) {
                 toogleSongState();
 
+            }
+        });
+        mMediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+            @Override
+            public void onCompletion(MediaPlayer mp) {
+                mPlayerStateButton.setImageResource(R.drawable.ic_play);
             }
         });
 
@@ -78,6 +90,11 @@ public class MainActivity extends AppCompatActivity {
                 mSelectedTitle.setText(selectedTrack.getTitle());
                 Picasso.with(MainActivity.this).load(selectedTrack.getAvatarURL()).into(mSelectedThumbnail);
 
+                if (mMediaPlayer.isPlaying()){
+                    mMediaPlayer.stop();
+                    mMediaPlayer.reset();
+                }
+
                 try {
                     mMediaPlayer.setDataSource(selectedTrack.getStreamURL()+"?client_id="+SoundCloudService.CLIENT_ID);
                     mMediaPlayer.prepareAsync();
@@ -89,12 +106,10 @@ public class MainActivity extends AppCompatActivity {
         recyclerView.setAdapter(mAdapter);
 
         SoundCloudService service = SoundCloud.getService();
-        service.searchSongs("dark horse", new Callback<List<Track>>() {
+        service.getRecentSongs(new SimpleDateFormat("yyyy-MM-dd hh:mm:ss").format(new Date()), new Callback<List<Track>>() {
             @Override
             public void success(List<Track> tracks, Response response) {
-                mTracks.clear();
-                mTracks.addAll(tracks);
-                mAdapter.notifyDataSetChanged();
+                updateTracks(tracks);
             }
 
             @Override
@@ -102,6 +117,12 @@ public class MainActivity extends AppCompatActivity {
 
             }
         });
+    }
+
+    private void updateTracks(List<Track> tracks){
+        mTracks.clear();
+        mTracks.addAll(tracks);
+        mAdapter.notifyDataSetChanged();
     }
 
     private void toogleSongState() {
@@ -115,9 +136,59 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onDestroy() {
+        super.onDestroy();
+
+        if (mMediaPlayer != null){
+            if (mMediaPlayer.isPlaying()){
+                mMediaPlayer.stop();
+            }
+            mMediaPlayer.release();
+            mMediaPlayer = null;
+        }
+    }
+
+    @Override
+    public boolean onQueryTextSubmit(String query) {
+        mSearchView.clearFocus();
+        SoundCloud.getService().searchSongs(query, new Callback<List<Track>>() {
+            @Override
+            public void success(List<Track> tracks, Response response) {
+                updateTracks(tracks);
+            }
+
+            @Override
+            public void failure(RetrofitError error) {
+
+            }
+        });
+        return true;
+    }
+
+    @Override
+    public boolean onQueryTextChange(String newText) {
+        return false;
+    }
+
+    @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
+        mSearchView = (SearchView) menu.findItem(R.id.search_view).getActionView();
+        mSearchView.setOnQueryTextListener(this);
+        MenuItemCompat.setOnActionExpandListener(menu.findItem(R.id.search_view), new MenuItemCompat.OnActionExpandListener() {
+            @Override
+            public boolean onMenuItemActionExpand(MenuItem item) {
+                mPreviousTracks= new ArrayList<Track>(mTracks);
+                return true;
+            }
+
+            @Override
+            public boolean onMenuItemActionCollapse(MenuItem item) {
+                updateTracks(mPreviousTracks);
+                return true;
+            }
+        });
         return true;
     }
 
@@ -129,7 +200,7 @@ public class MainActivity extends AppCompatActivity {
         int id = item.getItemId();
 
         //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
+        if (id == R.id.search_view) {
             return true;
         }
 

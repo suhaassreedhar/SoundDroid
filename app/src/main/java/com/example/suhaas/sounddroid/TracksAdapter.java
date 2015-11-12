@@ -28,8 +28,9 @@ public class TracksAdapter extends RecyclerView.Adapter<TracksAdapter.ViewHolder
 
         @Override
         public void onClick(View v) {
-            if (mOnItemClickListener != null){
-                mOnItemClickListener.onItemClick(null,v,getPosition(), 0);
+            if (mOnItemClickListener != null) {
+                //noinspection deprecation
+                mOnItemClickListener.onItemClick(null, v, getPosition(), 0);
             }
 
         }
