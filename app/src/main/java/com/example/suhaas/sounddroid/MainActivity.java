@@ -1,21 +1,29 @@
 package com.example.suhaas.sounddroid;
 
+import android.media.AudioManager;
+import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ImageView;
+import android.widget.TextView;
 
 import com.example.suhaas.sounddroid.com.example.suhaas.sounddroid.soundcloud.SoundCloud;
 import com.example.suhaas.sounddroid.com.example.suhaas.sounddroid.soundcloud.SoundCloudService;
 import com.example.suhaas.sounddroid.com.example.suhaas.sounddroid.soundcloud.Track;
+import com.squareup.picasso.Picasso;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 import retrofit.Callback;
-import retrofit.RestAdapter;
 import retrofit.RetrofitError;
 import retrofit.client.Response;
 
@@ -24,16 +32,60 @@ public class MainActivity extends AppCompatActivity {
 
     private TracksAdapter mAdapter;
     private List<Track> mTracks;
+    private TextView mSelectedTitle;
+    private ImageView mSelectedThumbnail;
+    private MediaPlayer mMediaPlayer;
+    private ImageView mPlayerStateButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        mMediaPlayer = new MediaPlayer();
+        mMediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
+        mMediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+            @Override
+            public void onPrepared(MediaPlayer mp) {
+                toogleSongState();
+
+            }
+        });
+
+        Toolbar view = (Toolbar)findViewById(R.id.player_toolbar);
+        mSelectedTitle = (TextView)findViewById(R.id.selected_title);
+        mSelectedThumbnail = (ImageView)findViewById(R.id.selected_thumbnail);
+
+        mPlayerStateButton = (ImageView)findViewById(R.id.player_state);
+        mPlayerStateButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                toogleSongState();
+
+            }
+        });
+
+
         RecyclerView recyclerView = (RecyclerView) findViewById(R.id.songs_list);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         mTracks = new ArrayList<Track>();
-        mAdapter = new TracksAdapter(mTracks);
+        mAdapter = new TracksAdapter(this, mTracks);
+        mAdapter.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                Track selectedTrack = mTracks.get(position);
+
+                mSelectedTitle.setText(selectedTrack.getTitle());
+                Picasso.with(MainActivity.this).load(selectedTrack.getAvatarURL()).into(mSelectedThumbnail);
+
+                try {
+                    mMediaPlayer.setDataSource(selectedTrack.getStreamURL()+"?client_id="+SoundCloudService.CLIENT_ID);
+                    mMediaPlayer.prepareAsync();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
         recyclerView.setAdapter(mAdapter);
 
         SoundCloudService service = SoundCloud.getService();
@@ -50,6 +102,16 @@ public class MainActivity extends AppCompatActivity {
 
             }
         });
+    }
+
+    private void toogleSongState() {
+        if (mMediaPlayer.isPlaying()){
+            mMediaPlayer.pause();
+            mPlayerStateButton.setImageResource(R.drawable.ic_play);
+        }else{
+            mMediaPlayer.start();
+            mPlayerStateButton.setImageResource(R.drawable.ic_pausenew);
+        }
     }
 
     @Override
