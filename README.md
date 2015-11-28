@@ -9,7 +9,7 @@ Features:
 
 *Play,pause and skip the tracks
 
-Reference:
+Reference:http://api.soundcloud.com
 
 
 
