@@ -9,7 +9,8 @@ A music player app lets you to hear more hip hop, rock, electronic, jazz...
 
 *Play,pause and skip the tracks
 
-###Reference Link:(http://api.soundcloud.com)
+###Reference Link:
+(http://api.soundcloud.com)
 
 
 
