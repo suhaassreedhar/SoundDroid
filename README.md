@@ -1,7 +1,7 @@
 # SoundDroid
 A music player app lets you to hear more hip hop, rock, electronic, jazz...
 
-Features:
+##Features:
 
 *Explore trending music and trending audios
 
@@ -9,7 +9,7 @@ Features:
 
 *Play,pause and skip the tracks
 
-Reference:http://api.soundcloud.com
+###Reference Link:(http://api.soundcloud.com)
 
 
 
